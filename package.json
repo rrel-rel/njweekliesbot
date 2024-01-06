@@ -1,0 +1,20 @@
+{
+  "name": "njweeklies-bot",
+  "version": "1.0.0",
+  "description": "bot that automates team creation process",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "relrel",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "mysql": "^2.18.1",
+    "osu-web.js": "^1.4.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0"
+  }
+}
