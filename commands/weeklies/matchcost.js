@@ -19,24 +19,27 @@ function median(scores) {
     return scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
 }
 
-// Function to calculate the match cost | TODO: update to use new MC formula
-function calculateMatchCost(userScores, allGameScores) {
+
+
+// Function to calculate the match cost | TODO: add ability to ignore x amount of maps
+function calculateMatchCost(userScores, allGameScores, medianNumMapsPlayed) {
     
-    let n_prime = userScores.length;
-    
-    let sumSiOverMi = 0;
+    let scorenum = 0;
+
+    let playerNumMapsPlayed = userScores.length;
+    let sumNiOverMi = 0; //sum of player score over median score
+
     userScores.forEach(userScore => {
         // Find the scores for the game this user score is part of
         const gameScores = allGameScores.find(game => game.game_id === userScore.game_id).scores.map(score => score.score);
         const medianGameScore = median(gameScores);
-        sumSiOverMi += userScore.score / medianGameScore;
+        scorenum++;
+        sumNiOverMi += userScore.score / medianGameScore;
     });
-    let n = allGameScores.length;
-    
-    const numberOfScoresPerGame = allGameScores.map(game => game.scores.length);
-    const m = median(numberOfScoresPerGame);
 
-    const cost = (2 * sumSiOverMi) / (n_prime + 2) * Math.cbrt(n / m);
+    //console.log(`playerNumMapsPlayed value - ${playerNumMapsPlayed} | median maps value - ${medianNumMapsPlayed}`);
+
+    const cost = ((sumNiOverMi) / (playerNumMapsPlayed)) * Math.cbrt(playerNumMapsPlayed / medianNumMapsPlayed);
 
     return cost;
 }
@@ -84,14 +87,24 @@ module.exports = {
                             }
                         });
                     });
-    
+                    
+
+                    const numMapsPlayedArray = [];
+                    // Count number of times each player has played a map
+                    for (const userId in userScores) {
+                        const userScore = userScores[userId];
+                        const numScores = userScore.length;
+                        numMapsPlayedArray.push(numScores);
+                    }
+
+                    const medianNumMapsPlayed = median(numMapsPlayedArray);
+
                     // Calculate match cost for each user
                     const userMatchCosts = Object.keys(userScores).map(userId => ({
                         userId: userId,
-                        matchCost: calculateMatchCost(userScores[userId], allScores)
+                        matchCost: calculateMatchCost(userScores[userId], allScores, medianNumMapsPlayed)
                     }));
-    
-                    // Response stuff | TODO replace with "user mmrs for _, _, _ have been updated!"
+
                     const response = userMatchCosts.map(user => `User ID ${user.userId}: Match Cost - ${user.matchCost.toFixed(2)}`).join('\n');
                     await interaction.reply(`Match Costs:\n${response}`);
                 } else {

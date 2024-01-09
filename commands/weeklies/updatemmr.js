@@ -19,22 +19,23 @@ function median(scores) {
     return scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
 }
 
-// Function to calculate the match cost | TODO: update to use new MC formula
-function calculateMatchCost(userScores, allGameScores) {
-    let n_prime = userScores.length;
-    let sumSiOverMi = 0;
+// Function to calculate the match cost | TODO: add ability to ignore x amount of maps
+function calculateMatchCost(userScores, allGameScores, medianNumMapsPlayed) {
+    
+    let scorenum = 0;
+
+    let playerNumMapsPlayed = userScores.length;
+    let sumNiOverMi = 0; //sum of player score over median score
+
     userScores.forEach(userScore => {
         // Find the scores for the game this user score is part of
         const gameScores = allGameScores.find(game => game.game_id === userScore.game_id).scores.map(score => score.score);
         const medianGameScore = median(gameScores);
-        sumSiOverMi += userScore.score / medianGameScore;
+        scorenum++;
+        sumNiOverMi += userScore.score / medianGameScore;
     });
-    let n = allGameScores.length;
-    
-    const numberOfScoresPerGame = allGameScores.map(game => game.scores.length);
-    const m = median(numberOfScoresPerGame);
 
-    const cost = (2 * sumSiOverMi) / (n_prime + 2) * Math.cbrt(n / m);
+    const cost = ((sumNiOverMi) / (playerNumMapsPlayed)) * Math.cbrt(playerNumMapsPlayed / medianNumMapsPlayed);
 
     return cost;
 }
@@ -103,10 +104,20 @@ module.exports = {
                         });
                     });
     
+                    const numMapsPlayedArray = [];
+                    // Count number of times each player has played a map
+                    for (const userId in userScores) {
+                        const userScore = userScores[userId];
+                        const numScores = userScore.length;
+                        numMapsPlayedArray.push(numScores);
+                    }
+
+                    const medianNumMapsPlayed = median(numMapsPlayedArray);
+
                     // Calculate match cost for each user
                     const userMatchCosts = Object.keys(userScores).map(userId => ({
                         userId: userId,
-                        matchCost: calculateMatchCost(userScores[userId], allScores),
+                        matchCost: calculateMatchCost(userScores[userId], allScores, medianNumMapsPlayed),
                         team: userScores[userId][0]?.team
                     }));
                     
@@ -130,8 +141,6 @@ module.exports = {
                             };
                         }
                     }));
-
-                    // TODO check which team won
 
                     const teamScores = {
                         Blue: 0,
@@ -159,8 +168,10 @@ module.exports = {
                         }
                     });
                     
-                    const winningTeam = teamScores['Red'] > teamScores['Blue'] ? 'Red' : 'Blue';
-                    
+                    const winningTeam = blueWins > redWins ? 'Blue' : 'Red';
+
+                    //console.log(winningTeam);
+
                     // Log the results and update mmr
                     osuUsernames.forEach(async (result) => {
                         let resultwin = Boolean(result.team === winningTeam); // check if user won 
@@ -198,7 +209,7 @@ module.exports = {
                                 });
                     
                                 // Log success or handle the updateResult as needed
-                                console.log('MMR updated in the database:', updateResult);
+                                //console.log('MMR updated in the database:', updateResult);
                             } catch (error) {
                                 console.error('Error updating MMR in the database:', error);
                             }
@@ -209,8 +220,6 @@ module.exports = {
                         }
                         
                     });
-
-                    // You can use the osuUsernames array for further processing or sending responses
 
                     await interaction.reply('Match costs and usernames retrieved successfully.');
                 } else {
